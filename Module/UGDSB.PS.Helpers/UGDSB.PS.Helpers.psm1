@@ -1365,6 +1365,103 @@ function Set-WindowsAutoLogon {
   }
 }
 #EndRegion '.\Public\Set-WindowsAutoLogon.ps1' 31
+#Region '.\Public\Test-AllowedGroupMember.ps1' 0
+# TEST (maybe split)
+<#
+  .DESCRIPTION
+  This cmdlet is used to check to see if a specific user belongs to a group that is passed
+  .PARAMETER groupList
+  Array of the groups to check
+  .PARAMETER domain
+  If active directory, what domain to check. If you use this, it ignores any of the Az parameters
+  .PARAMETER AzAppRegistration
+  The client id of the azure app registration working under
+  .PARAMETER AzTenant
+  The directory id for the Azure AD tenant
+  .PARAMETER AzSecret
+  The client secret used to connect to MS Graph
+  .EXAMPLE
+  Check for a specific user in active directory
+    Test-AllowedGroupMember -userPrincipalName <UPN> -groupList @("GROUPNAME") -domain <DOMAIN>
+  Check for a specific user in Azure AD group
+    Test-AllowedGroupMember -userPrincipalName <UPN> -groupList @("GROUPNAME") -AzTenant $AzTenant -AzAppRegistration $AzAppRegistration -AzSecret $Secret
+#>
+function Test-AllowedGroupMember{
+  [CmdletBinding()]
+  [OutputType([System.Boolean])]
+  param(
+    [Parameter(Mandatory = $true)][ValidateNotNullOrEmpty()][string]$userPrincipalName,
+    [Parameter(Mandatory = $true)][ValidateNotNullOrEmpty()][Object[]]$groupList,
+    [Parameter()][string]$domain,
+    [Parameter()][string]$AzAppRegistration,
+    [Parameter()][string]$AzTenant,
+    [Parameter()][pscredential]$AzSecret
+    
+  )
+  # Nested function to be able to recurse through groups in Azure AD since Get-MGGroupMembers does not have this function currently
+  function getNestedMembers{
+    param(
+      [Parameter(Mandatory = $true)][ValidateNotNullOrEmpty()][string]$groupId,
+      [Parameter(Mandatory = $true)][ValidateNotNullOrEmpty()][string]$userPrincipalName
+    )
+    # Set found to false
+    $results = $false
+    # Get memberes of the group that was passed
+    $members = Get-MgGroupMember -All -GroupId $groupId
+    # If the username is found return true
+    if($userPrincipalName -in $members.AdditionalProperties.userPrincipalName){
+      return $true
+    }
+    # If not found, check the list for other nested groups
+    else{
+      $groups = $members | where-object {$_.AdditionalProperties.'@odata.type' -eq "#microsoft.graph.group"}
+      # Loop through those groups those nested function
+      foreach($group in $groups){
+        $results = getNestedMembers -groupId $groupId -userPrincipalName $userPrincipalName
+        if($results -eq $true){
+          # if the results returned are true, return true.
+          return $true
+        }
+      }
+    }
+  }
+  # If set to query Azure AD Groups connect to MS Graph
+  if($AzAppRegistration){
+    # Connect to MS Graph
+    $msalToken = Get-MsalToken -clientID $AzAppRegistration -clientSecret $AzSecret.Password -tenantID $AzTenant
+    Connect-MgGraph -AccessToken $msalToken.AccessToken | Out-Null
+  }
+  foreach($group in $groupList){
+    try{
+      if($domain){
+        # Get all the members and nested members of the group in Active Directory
+        $members = Get-ADGroupMember -Recursive -Server $domain -Identity $group -ErrorAction SilentlyContinue  | where-object {$_.objectClass -eq 'User'} | Get-ADUser | select-object UserPrincipalName
+        # Check to see if the list contains the expected UPN and if return true
+        if($members.UserPrincipalName -contains $userPrincipalName){
+          return $true
+        }        
+      }
+      else{
+        # Get the group from Azure AD
+        $groups = Get-MGgroup -Filter "DisplayName eq '$($group)'"
+        # Loop through if there are multiple groups with the same name
+        foreach($group in $groups){
+          # Get the results of the function to recurse through the groups
+          $results = getNestedMembers -groupId $group.id -userPrincipalName $userPrincipalName
+          # Return true if correct
+          if($results -eq $true){
+            return $true
+          }
+        }
+      }
+    }
+    catch{
+      throw "An error occured while processing group $($group) : $($Error[0])"
+    }
+  }
+  return $false
+}
+#EndRegion '.\Public\Test-AllowedGroupMember.ps1' 96
 #Region '.\Public\Test-EntraIDDeviceRegistration.ps1' 0
 <#
   .SYNOPSIS
@@ -1406,6 +1503,54 @@ function Test-LocalAdmin{
   }  
 }
 #EndRegion '.\Public\Test-LocalAdmin.ps1' 11
+#Region '.\Public\Test-SamAccountName.ps1' 0
+<#
+  .DESCRIPTION
+  This cmdlet is designed to check Active Directory for a valid samAccountName when creating/changing user.
+  .PARAMETER samAccountName
+  The account name we want to test for
+  .PARAMETER server
+  The server that we want to test against
+  .EXAMPLE
+  Check for a specific samAccountName
+    Test-SamAccountName -samAccountName <NAME> -server <SERVER>
+#>
+function Test-SamAccountName{
+  [CmdletBinding()]
+  [OutputType([System.String],[System.Boolean])]
+  param(
+    [Parameter(Mandatory = $true)]$samAccountName,
+    [Parameter(Mandatory = $true)]$server    
+  )
+  # Default Addition at the end of the name if it exists.
+  $postFix = 2
+  # Loop through to try to find a valid samAccountName or fail if loops too many times
+  do{
+    try{
+      # Check to see if the user already exists.
+      Get-ADUser -Identity $samAccountName -Server $server | Out-Null
+      # If it does exist, then add the postfix
+      if($postFix -eq 2){
+        $samAccountName = "$($samAccountName)$($postFix)"
+      }
+      # If postfix is greater than default, then remove it (as we max at 9) to add the new postfix
+      else{
+        $samAccountName = "$($samAccountName.substring(0,$samAccountName.length -1))$($postFix)"
+      } 
+    }
+    # If the account doesn't exist, return the samAccountName as good
+    catch [Microsoft.ActiveDirectory.Management.ADIdentityResolutionException] {
+      return $samAccountName
+    }
+    catch {
+      throw $Error[0]
+    }
+    $postFix++
+  }while($postFix -lt 10)  
+  # Return false if we couldn't find a valid samAccountName we could use
+  return $false  
+}
+#EndRegion '.\Public\Test-SamAccountName.ps1' 47
 #Region '.\Public\Write-WinEvent.ps1' 0
 function Write-WinEvent {
   [CmdLetBinding()]
