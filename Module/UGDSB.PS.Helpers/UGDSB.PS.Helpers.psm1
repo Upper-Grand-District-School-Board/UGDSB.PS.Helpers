@@ -234,6 +234,21 @@ function Convert-SidtoEntraObjID{
   return $guid        
 }
 #EndRegion '.\Public\Convert-SidtoEntraObjID.ps1' 22
+#Region '.\Public\Get-AllowedAccess.ps1' 0
+function Get-AllowedAccess{
+  [CmdletBinding()]
+  param(
+    [Parameter(Mandatory = $true)][string[]]$Roles,
+    [Parameter(Mandatory = $true)][string[]]$AllowedRoles
+  )
+  foreach($role in $AllowedRoles){
+    if($Roles -contains $role){
+      return $true
+    }
+  }
+  return $false
+}
+#EndRegion '.\Public\Get-AllowedAccess.ps1' 14
 #Region '.\Public\Get-AutorunRegKeys.ps1' 0
 function Get-AutorunRegKeys {
   [cmdletbinding()]
@@ -629,6 +644,56 @@ function Get-KeyVaultSecret{
   }
 }
 #EndRegion '.\Public\Get-KeyVaultSecret.ps1' 48
+#Region '.\Public\Get-PermissionList.ps1' 0
+function Get-PermissionList {
+  [CmdletBinding()]
+  param(
+    [Parameter(Mandatory = $true)][string]$mailbox,
+    [Parameter(Mandatory = $true)][string]$permissionType
+  )
+  switch ($permissionType) {
+    "fullaccess" {
+      $list = Get-MailboxPermission -Identity $mailbox | Where-Object { $_.User -ne "NT AUTHORITY\SELF" } | Select-Object -Property User, AccessRights, Action
+      $columdata = @(    
+        @{ field = "user"; flex = 1.0;}
+      )
+    }
+    "sendas" {
+      $list = Get-RecipientPermission -Identity $mailbox | Where-Object { $_.Trustee -ne "NT AUTHORITY\SELF" } | Select-Object -Property Trustee, AccessRights, IsInherited
+      $columdata = @(    @{ field = "Trustee"; flex = 1.0 }) 
+    }
+    "sendonbehalf" {
+      $list = [System.Collections.Generic.List[PSCustomObject]]::new()
+      $sendOnBehalfPermissions = Get-Mailbox -Identity $mailbox | Select-Object GrantSendonBehalfTo
+      foreach ($obj in $sendOnBehalfPermissions.GrantSendonBehalfTo) {
+        $graphUser = Get-GraphUser -userid $obj
+        $list.Add([PSCustomObject]@{ User = $graphUser.DisplayName; Email = $graphUser.UserPrincipalName })
+      }   
+      $columdata = @(
+        @{ field = "User"; flex = 1.0 }
+        @{ field = "Email"; flex = 1.0 }
+      )   
+    }
+    "calendaraccess" {
+      $list = [System.Collections.Generic.List[PSCustomObject]]::new()
+      $calendarPermissions = Get-MailboxFolderPermission -Identity "$($mailbox):\Calendar" | Select-Object -Property User, AccessRights
+      foreach ($obj in $calendarPermissions) {
+        $list.Add([PSCustomObject]@{ User = $obj.User.DisplayName; AccessRights = ($obj.AccessRights -join ",") })
+      }  
+      $columdata = @(
+        @{ field = "User"; flex = 1.0 }
+        @{ field = "AccessRights"; flex = 1.0 }	
+      )           
+    }
+  }
+  Set-UDElement -Id $permissionType -Content {
+    if($list){
+    New-UDDataGrid -id "$($permissionType)_grid" -LoadRows {
+      $list | Out-UDDataGridData -Context $EventData -TotalRows $list.Count
+    } -Columns $columdata -AutoHeight $true -PageSize 500         }
+  }
+}
+#EndRegion '.\Public\Get-PermissionList.ps1' 49
 #Region '.\Public\Get-PublicKeyBytesEncodedString.ps1' 0
 <#
   .SYNOPSIS
@@ -1333,6 +1398,19 @@ function Set-AutorunRegKeys {
   }
 }
 #EndRegion '.\Public\Set-AutorunRegKeys.ps1' 56
+#Region '.\Public\Set-LoadingAnimation.ps1' 0
+function Set-LoadingAnimation {
+  [CmdletBinding()]
+  param(
+    [Parameter(Mandatory = $true)][string[]]$permissionType
+  )
+  foreach ($obj in $permissionType) {
+    Set-UDElement -Id $obj -Content {
+      New-UDImage -Url "/assets/LoadingCircle.gif" -Width 250 -Height 250
+    }
+  }
+}
+#EndRegion '.\Public\Set-LoadingAnimation.ps1' 12
 #Region '.\Public\Set-WindowsAutoLogon.ps1' 0
 <#
   .DESCRIPTION 
@@ -1365,6 +1443,109 @@ function Set-WindowsAutoLogon {
   }
 }
 #EndRegion '.\Public\Set-WindowsAutoLogon.ps1' 31
+#Region '.\Public\Show-ManageMailboxModal.ps1' 0
+function Show-ManageMailboxModal {
+  [CmdletBinding()]
+  param(
+    [Parameter(Mandatory = $true)][string]$mailbox,
+    [Parameter(Mandatory = $true)][string]$permissionType,
+    [Parameter(Mandatory = $true)][string]$action
+  )
+  Show-UDModal -Content {
+    New-UDTypography -Text "Email Address" -Variant "h5" -ClassName "card-title rounded x-card-title"
+    New-UDTextbox -id "add_email" -Label "Email Address" -Placeholder "Enter Email Address" -Value "" -FullWidth
+  } -Footer {
+    New-UDButton -Text $action -OnClick {   
+      try{
+        Import-Module -Name $UGDSBPSPath -Force
+        Set-UDElement -Id $permissionType -Content {
+          New-UDImage -Url "/assets/LoadingCircle.gif" -Width 250 -Height 250
+        }
+        $email = (Get-UDElement -id "add_email").Value
+        $EventEntry = @{
+          Source    = "Manage Mailbox Permissions"
+          LogName   = "PowerShellScripts"
+          EventType = "Information"
+          EventId   = 1000  
+          EventData = [Ordered]@{
+            thread = Get-Random
+            user   = $User 
+            action = ""
+            result = "Success"
+            error  = $null
+          }
+        }                        
+        switch($permissionType){
+          "fullaccess" {
+            if($action -eq "add"){
+              $EventEntry.EventData.Action = "Add Full Access Permission for $($email) on $($mailbox)"
+              Add-MailboxPermission -Identity $mailbox -User $email -AccessRights FullAccess  
+              Start-Sleep -Seconds 20
+            }
+            else{
+              $EventEntry.EventData.Action = "Remove Full Access Permission for $($email) on $($mailbox)"
+              Remove-MailboxPermission -Identity $mailbox -User $email -AccessRights FullAccess -Confirm:$false
+              Start-Sleep -Seconds 60
+            }
+            Get-PermissionList -mailbox $mailbox -permissionType "fullaccess"
+          }
+          "sendas" {
+            if($action -eq "add"){
+              $EventEntry.EventData.Action = "Add Send As Permission for $($email) on $($mailbox)"
+              Add-RecipientPermission -Identity $mailbox -AccessRights SendAs -Trustee $email -Confirm:$false  
+            }
+            else{
+              $EventEntry.EventData.Action = "Remove Send As Permission for $($email) on $($mailbox)"
+              Remove-RecipientPermission -Identity $mailbox -AccessRights SendAs -Trustee $email -Confirm:$false
+            }
+            Start-Sleep -Seconds 20
+            Get-PermissionList -mailbox $mailbox -permissionType "sendas"            
+          }
+          "sendonbehalf" {
+            # Entra ID App Registration Secret
+            $clientSecret = Get-Secret -Vault $KVName -Name $AzClientSecret
+            # Get Graph Access Token
+            Get-GraphAccessToken -clientID $AzAppRegistration -clientSecret $clientSecret.GetNetworkCredential().Password -tenantID $AzTenant | Out-Null                
+            if($action -eq "add"){
+              $EventEntry.EventData.Action = "Add Send On Behalf Permission for $($email) on $($mailbox)"
+              Set-Mailbox $mailbox -GrantSendOnBehalfTo @{add=$email}  
+            }
+            else{
+              $EventEntry.EventData.Action = "Remove Send On Behalf Permission for $($email) on $($mailbox)"
+              Set-Mailbox $mailbox -GrantSendOnBehalfTo @{remove=$email}   -Confirm:$false              
+            }
+            Start-Sleep -Seconds 20
+            Get-PermissionList -mailbox $mailbox -permissionType "sendonbehalf"             
+          }
+          "calendaraccess" {
+            if($action -eq "add"){
+              $EventEntry.EventData.Action = "Add Calendar Permission for $($email) on $($mailbox)"
+              Add-MailboxFolderPermission -Identity "$($mailbox):\Calendar" -User $email -AccessRights Editor -SharingPermissionFlags Delegate  
+            }
+            else{
+              $EventEntry.EventData.Action = "Remove Calendar Permission for $($email) on $($mailbox)"
+              Remove-MailboxFolderPermission -Identity "$($mailbox):\Calendar" -User $email    -Confirm:$false          
+            }
+            Start-Sleep -Seconds 20
+            Get-PermissionList -mailbox $mailbox -permissionType "calendaraccess"     
+          }
+        }  
+      }
+      catch{
+        $EventEntry.EventType = "Error"
+        $EventEntry.EventData.Result = "Failed"
+        $EventEntry.EventData.error = $_.Exception.Message
+        Show-UDToast -Message $_.Exception.Message -Duration 10000 -Position "topRight" -BackgroundColor "#FF0000"
+      }
+      finally{
+        Write-WinEvent @EventEntry    
+        Hide-UDModal
+      }
+    }                                 
+    New-UDButton -Text "Close" -OnClick { Hide-UDModal }
+  }
+}
+#EndRegion '.\Public\Show-ManageMailboxModal.ps1' 102
 #Region '.\Public\Test-AllowedGroupMember.ps1' 0
 # TEST (maybe split)
 <#
@@ -1551,6 +1732,40 @@ function Test-SamAccountName{
   return $false  
 }
 #EndRegion '.\Public\Test-SamAccountName.ps1' 47
+#Region '.\Public\Write-AutomationEventLog.ps1' 0
+function Write-AutomationEventLog{
+  [CmdletBinding()]
+  param(
+    [Parameter(Mandatory = $true)][string]$Source,
+    [Parameter()][string]$LogName = "PowerShellScripts",
+    [Parameter()][string]$EventType = "Information",
+    [Parameter()][int]$EventId = 1000,
+    [Parameter()][int]$threadID,
+    [Parameter(Mandatory = $true)][string]$user,
+    [Parameter(Mandatory = $true)][string]$action,
+    [Parameter()][string]$result = "Success",
+    [Parameter()][string]$errormsg = $null
+  )
+  # Thread ID
+  if (-not $PSBoundParameters.ContainsKey("threadID")){
+    $threadID = Get-Random
+  }
+  $EventEntry = @{
+    Source    = $Source
+    LogName   = $LogName
+    EventType = $EventType
+    EventId   = $EventId  
+    EventData = [Ordered]@{
+      thread    = $threadID
+      user      = $user     
+      action    = $action
+      result    = $result
+      error     = $errormsg
+    }
+  }
+  Write-WinEvent @EventEntry
+}
+#EndRegion '.\Public\Write-AutomationEventLog.ps1' 33
 #Region '.\Public\Write-WinEvent.ps1' 0
 function Write-WinEvent {
   [CmdLetBinding()]
