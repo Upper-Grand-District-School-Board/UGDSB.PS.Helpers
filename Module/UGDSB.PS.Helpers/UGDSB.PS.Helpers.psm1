@@ -1,4 +1,5 @@
-﻿#Region '.\Public\Add-PInvokeType.ps1' 0
+﻿#Region '.\Public\Add-PInvokeType.ps1' -1
+
 function Add-PInvokeType {
   [cmdletbinding()]
   param()
@@ -189,7 +190,8 @@ namespace PInvoke.LSAUtil {
   #endregion  
 }
 #EndRegion '.\Public\Add-PInvokeType.ps1' 190
-#Region '.\Public\Convert-EntraObjIDtoSid.ps1' 0
+#Region '.\Public\Convert-EntraObjIDtoSid.ps1' -1
+
 <#
   .DESCRIPTION
   This cmdlet will convert a Azure AD Object ID TO Sid
@@ -211,7 +213,8 @@ function Convert-EntraObjIDtoSid{
   return $sid  
 }
 #EndRegion '.\Public\Convert-EntraObjIDtoSid.ps1' 21
-#Region '.\Public\Convert-SidtoEntraObjID.ps1' 0
+#Region '.\Public\Convert-SidtoEntraObjID.ps1' -1
+
 <#
   .DESCRIPTION
   This cmdlet will convert a SID to an Azure AD Object ID
@@ -234,7 +237,8 @@ function Convert-SidtoEntraObjID{
   return $guid        
 }
 #EndRegion '.\Public\Convert-SidtoEntraObjID.ps1' 22
-#Region '.\Public\Get-AllowedAccess.ps1' 0
+#Region '.\Public\Get-AllowedAccess.ps1' -1
+
 function Get-AllowedAccess{
   [CmdletBinding()]
   param(
@@ -249,7 +253,8 @@ function Get-AllowedAccess{
   return $false
 }
 #EndRegion '.\Public\Get-AllowedAccess.ps1' 14
-#Region '.\Public\Get-AutorunRegKeys.ps1' 0
+#Region '.\Public\Get-AutorunRegKeys.ps1' -1
+
 function Get-AutorunRegKeys {
   [cmdletbinding()]
   param(
@@ -302,7 +307,69 @@ function Get-AutorunRegKeys {
   return $Keys
 }
 #EndRegion '.\Public\Get-AutorunRegKeys.ps1' 52
-#Region '.\Public\Get-DSREGCMDStatus.ps1' 0
+#Region '.\Public\Get-CleanReturnData.ps1' -1
+
+<#
+.SYNOPSIS
+    Returns a cleaned list of objects, omitting specified properties.
+
+.DESCRIPTION
+    The Get-CleanReturnData function takes an array of objects (hashtable or PSCustomObject) and returns a new list of PSCustomObjects.
+    It copies all properties except those specified in the PropertiesToSkip parameter, allowing you to filter out unwanted properties from the output.
+
+.PARAMETER Data
+    The array of objects (Hashtable or PSCustomObject) to process.
+
+.PARAMETER PropertiesToSkip
+    An optional array of property names to exclude from the returned objects.
+
+.EXAMPLE
+    Get-CleanReturnData -Data $results -PropertiesToSkip 'Password','Secret'
+
+    Returns a cleaned list of objects from $results, omitting the 'Password' and 'Secret' properties.
+
+.EXAMPLE
+    Get-CleanReturnData -Data $users
+
+    Returns a cleaned list of objects from $users, including all properties.
+
+.NOTES
+    Author: Jeremy Putman
+    Last Updated: 2025-10-11
+#>
+function Get-CleanReturnData {
+  [cmdletbinding()]
+  param(
+    [Parameter(Mandatory = $true)][Object[]]$Data,
+    [Parameter()][string[]]$PropertiesToSkip
+  )
+  # Get a list of the property names
+  $item_properties = switch -Regex ($Data.GetType().Name) {
+    'Hashtable' { $Data.Keys }
+    'PSCustomObject' { $Data.psobject.Properties.Name }
+    default { $Data | Get-Member -MemberType Property | Select-Object -Expand Name }
+  }  
+  # Create a clean list to return
+  $return_data = [System.Collections.Generic.List[PSCustomObject]]::new()
+  foreach ($item in $Data) {
+    $obj = [PSCustomObject]@{}
+    foreach($property in $item_properties){
+      if($property -notin $PropertiesToSkip){
+        if($item.$property.gettype().basetype.Name -eq "Enum"){
+          $obj | Add-Member -NotePropertyName $property -NotePropertyValue $item.$property.tostring() -force
+        }
+        else{
+          $obj | Add-Member -NotePropertyName $property -NotePropertyValue $item.$property -force
+        }
+      }
+    }
+    $return_data.Add($obj) | Out-Null
+  }
+  return $return_data
+}
+#EndRegion '.\Public\Get-CleanReturnData.ps1' 59
+#Region '.\Public\Get-DSREGCMDStatus.ps1' -1
+
 <#
   .DESCRIPTION 
   This is designed to parse the dsregcmd command to usable data. Originally from https://github.com/AdamGrossTX/ManagedUserManagement/blob/main/ClientScripts/Set-AutoLogon.ps1 by Adam Gross
@@ -380,7 +447,8 @@ function Get-DSREGCMDStatus {
   }
 }
 #EndRegion '.\Public\Get-DSREGCMDStatus.ps1' 77
-#Region '.\Public\Get-EntraDeviceCertificate.ps1' 0
+#Region '.\Public\Get-EntraDeviceCertificate.ps1' -1
+
 <#
   .DESCRIPTION 
   This is designed to get the device certificate for Entra that is enrolled. Originally from https://github.com/AdamGrossTX/ManagedUserManagement/blob/main/ClientScripts/Set-AutoLogon.ps1 by Adam Gross
@@ -410,7 +478,8 @@ function Get-EntraDeviceCertificate {
   }
 }
 #EndRegion '.\Public\Get-EntraDeviceCertificate.ps1' 29
-#Region '.\Public\Get-EntraIDDeviceID.ps1' 0
+#Region '.\Public\Get-EntraIDDeviceID.ps1' -1
+
 <#
   .DESCRIPTION 
   This is designed to get the entra id device id. Originally from https://azuretothemax.net/log-analytics-index/
@@ -456,7 +525,8 @@ function Get-EntraIDDeviceID {
   }
 }
 #EndRegion '.\Public\Get-EntraIDDeviceID.ps1' 45
-#Region '.\Public\Get-EntraIDJoinDate.ps1' 0
+#Region '.\Public\Get-EntraIDJoinDate.ps1' -1
+
 <#
   .DESCRIPTION 
   This is designed to get the entra id join date. Originally from https://azuretothemax.net/log-analytics-index/
@@ -485,7 +555,8 @@ function Get-EntraIDJoinDate {
   }
 }
 #EndRegion '.\Public\Get-EntraIDJoinDate.ps1' 28
-#Region '.\Public\Get-EntraIDRegistrationCertificateThumbprint.ps1' 0
+#Region '.\Public\Get-EntraIDRegistrationCertificateThumbprint.ps1' -1
+
 <#
   .SYNOPSIS
       Get the thumbprint of the certificate used for Azure AD device registration.
@@ -528,7 +599,8 @@ function Get-EntraIDRegistrationCertificateThumbprint {
   }
 }
 #EndRegion '.\Public\Get-EntraIDRegistrationCertificateThumbprint.ps1' 42
-#Region '.\Public\Get-EntraIDTenantID.ps1' 0
+#Region '.\Public\Get-EntraIDTenantID.ps1' -1
+
 <#
   .DESCRIPTION 
   This is designed to get the entra tenant id that device belogs too. Originally from https://azuretothemax.net/log-analytics-index/
@@ -543,7 +615,8 @@ function Get-EntraIDTenantID{
   return $EntraIDTenantID  
 }
 #EndRegion '.\Public\Get-EntraIDTenantID.ps1' 14
-#Region '.\Public\Get-InstalledApplications.ps1' 0
+#Region '.\Public\Get-InstalledApplications.ps1' -1
+
 <#
   .DESCRIPTION 
   This is designed to get the get the list of applications on the system. Originally from https://azuretothemax.net/log-analytics-index/
@@ -566,7 +639,8 @@ function Get-InstalledApplications {
   Return $Apps
 }
 #EndRegion '.\Public\Get-InstalledApplications.ps1' 22
-#Region '.\Public\Get-IntuneDeviceCertificate.ps1' 0
+#Region '.\Public\Get-IntuneDeviceCertificate.ps1' -1
+
 <#
   .DESCRIPTION 
   This is designed to get the device certificate for Intune that is enrolled. Originally from https://github.com/AdamGrossTX/ManagedUserManagement/blob/main/ClientScripts/Set-AutoLogon.ps1 by Adam Gross
@@ -595,7 +669,8 @@ function Get-IntuneDeviceCertificate {
   }  
 }
 #EndRegion '.\Public\Get-IntuneDeviceCertificate.ps1' 28
-#Region '.\Public\Get-KeyVaultSecret.ps1' 0
+#Region '.\Public\Get-KeyVaultSecret.ps1' -1
+
 <#
   .DESCRIPTION
   This cmdlet is used to connect to a keyvault as the machine identity of the Azure Machine it is running under.
@@ -644,7 +719,8 @@ function Get-KeyVaultSecret{
   }
 }
 #EndRegion '.\Public\Get-KeyVaultSecret.ps1' 48
-#Region '.\Public\Get-PermissionList.ps1' 0
+#Region '.\Public\Get-PermissionList.ps1' -1
+
 function Get-PermissionList {
   [CmdletBinding()]
   param(
@@ -653,14 +729,10 @@ function Get-PermissionList {
   )
   switch ($permissionType) {
     "fullaccess" {
-      $list = Get-MailboxPermission -Identity $mailbox | Where-Object { $_.User -ne "NT AUTHORITY\SELF" } | Select-Object -Property User, AccessRights, Action
-      $columdata = @(    
-        @{ field = "user"; flex = 1.0;}
-      )
+      $list = Get-MailboxPermission -Identity $mailbox | Where-Object { $_.User -ne "NT AUTHORITY\SELF" } | Select-Object -Property User
     }
     "sendas" {
-      $list = Get-RecipientPermission -Identity $mailbox | Where-Object { $_.Trustee -ne "NT AUTHORITY\SELF" } | Select-Object -Property Trustee, AccessRights, IsInherited
-      $columdata = @(    @{ field = "Trustee"; flex = 1.0 }) 
+      $list = Get-RecipientPermission -Identity $mailbox | Where-Object { $_.Trustee -ne "NT AUTHORITY\SELF" } | Select-Object -Property Trustee
     }
     "sendonbehalf" {
       $list = [System.Collections.Generic.List[PSCustomObject]]::new()
@@ -669,32 +741,24 @@ function Get-PermissionList {
         $graphUser = Get-GraphUser -userid $obj
         $list.Add([PSCustomObject]@{ User = $graphUser.DisplayName; Email = $graphUser.UserPrincipalName })
       }   
-      $columdata = @(
-        @{ field = "User"; flex = 1.0 }
-        @{ field = "Email"; flex = 1.0 }
-      )   
     }
     "calendaraccess" {
       $list = [System.Collections.Generic.List[PSCustomObject]]::new()
       $calendarPermissions = Get-MailboxFolderPermission -Identity "$($mailbox):\Calendar" | Select-Object -Property User, AccessRights
       foreach ($obj in $calendarPermissions) {
         $list.Add([PSCustomObject]@{ User = $obj.User.DisplayName; AccessRights = ($obj.AccessRights -join ",") })
-      }  
-      $columdata = @(
-        @{ field = "User"; flex = 1.0 }
-        @{ field = "AccessRights"; flex = 1.0 }	
-      )           
+      }         
     }
   }
   Set-UDElement -Id $permissionType -Content {
     if($list){
-    New-UDDataGrid -id "$($permissionType)_grid" -LoadRows {
-      $list | Out-UDDataGridData -Context $EventData -TotalRows $list.Count
-    } -Columns $columdata -AutoHeight $true -PageSize 500         }
+      New-UDTable -Data $list
+    }
   }
 }
-#EndRegion '.\Public\Get-PermissionList.ps1' 49
-#Region '.\Public\Get-PublicKeyBytesEncodedString.ps1' 0
+#EndRegion '.\Public\Get-PermissionList.ps1' 36
+#Region '.\Public\Get-PublicKeyBytesEncodedString.ps1' -1
+
 <#
   .SYNOPSIS
       Returns the public key byte array encoded as a Base64 string, of the certificate where the thumbprint passed as parameter input is a match.
@@ -742,51 +806,92 @@ function Get-PublicKeyBytesEncodedString {
   }
 }
 #EndRegion '.\Public\Get-PublicKeyBytesEncodedString.ps1' 47
-#Region '.\Public\Get-ScriptVariables.ps1' 0
-function Get-ScriptVariables{
-  [CmdLetBinding()]
+#Region '.\Public\Get-ScriptVariables.ps1' -1
+
+<#
+.SYNOPSIS
+  Loads variables from a JSON or YAML file and sets them in the global scope.
+
+.DESCRIPTION
+  The Get-ScriptVariables function reads variables from a specified JSON or YAML file.
+  It supports loading environment-specific or script-specific variables and sets them as global variables.
+  Optionally, it can download the file from a URI before processing.
+
+.PARAMETER JSON
+  The path to the JSON file containing the variables.
+
+.PARAMETER YAML
+  The path to the YAML file containing the variables.
+
+.PARAMETER URI
+  (Optional) A URI to download the JSON or YAML file from before processing.
+
+.PARAMETER Environment
+  The environment section to load variables from (e.g., 'Production', 'Development').
+
+.PARAMETER Script
+  (Optional) The script section to load variables from.
+
+.EXAMPLE
+  Get-ScriptVariables -JSON '.\vars.json' -Environment 'Production'
+  Loads variables from the 'Production' section of vars.json and sets them as global variables.
+
+.EXAMPLE
+  Get-ScriptVariables -YAML '.\vars.yaml' -Environment 'Development' -Script 'MyScript'
+  Loads variables from the 'Development' > 'MyScript' section of vars.yaml and sets them as global variables.
+
+.NOTES
+  Author: Jeremy Putman
+  Last Updated: 2025-10-11
+#>
+function Get-ScriptVariables {
+  [CmdletBinding()]
   param(
-    [Parameter(Mandatory = $true,ParameterSetName = 'JSON')][ValidateNotNullOrEmpty()][String]$JSON,
-    [Parameter(Mandatory = $true,ParameterSetName = 'URI')][ValidateNotNullOrEmpty()][String]$URI,
+    [Parameter(Mandatory = $true, ParameterSetName = 'JSON')][ValidateNotNullOrEmpty()][String]$JSON,
+    [Parameter(Mandatory = $true, ParameterSetName = 'YAML')][ValidateNotNullOrEmpty()][String]$YAML,
+    [Parameter()][ValidateNotNullOrEmpty()][String]$URI,
     [Parameter(Mandatory = $true)][ValidateNotNullOrEmpty()][String]$Environment,
     [Parameter()][ValidateNotNullOrEmpty()][String]$Script
   )
-  # If path to JSON file is selected
-  if($JSON){
+  # If URI is set download the file to the temp folder
+  if ($PSBoundParameters.ContainsKey("URI")) {
+    $path = Join-Path -Path $env:TEMP -childpath ($PSBoundParameters.ContainsKey("JSON") ? $JSON : $YAML)
+    Invoke-WebRequest -Uri $URI -OutFile $path -UseBasicParsing -ErrorAction Stop
+    if ($PSBoundParameters.ContainsKey("JSON")) {
+      $JSON = $path
+    }
+    else {
+      $YAML = $path
+    }
+  }
+  # If it is a JSON, read the file and get the keys
+  if ($PSBoundParameters.ContainsKey("JSON")) {
     $vars = Get-Content -Path $JSON | ConvertFrom-JSON -Depth 10
+    $keys = $vars.PSObject.Properties.Name
   }
-  # If a URI to a JSON is provided
-  else{
-    $vars = (Invoke-WebRequest -Uri $URI -Method "GET" -UseBasicParsing).Content | ConvertFrom-JSON -Depth 10
+  # Otherwise it would be a YAML file, so get the keys
+  else {
+    $vars = Get-Content -Path $YAML | ConvertFrom-Yaml
+    $keys = $vars.keys
   }
-  foreach ($var in $vars.PSObject.Properties) {
-    if($var.Name -eq "Environment"){
-      foreach($item in $var.Value.PSObject.Properties){
-        if($item.Name -eq $Environment){
-          foreach($obj in $item.Value.PSObject.Properties){
-            Set-Variable -Name $obj.Name -Value $obj.Value -Scope Global
-          }
-          break
-        }
+  # Loop through the keys and set the variables in the global scope
+  foreach ($key in $keys) {
+    if ($key -eq "Environment" -or $key -eq "Scripts") {
+      $section = ($key -eq "Environment") ? $Environment : $Script
+      $variables = ($PSBoundParameters.ContainsKey("JSON"))  ? ($vars.$key.$section.PSObject.Properties.Name) : ($vars.$key.$section.keys)
+      foreach ($variable in $variables) {
+        Set-Variable -Name $variable -Value $vars.$key.$section.$variable -Scope Global
       }
     }
-    elseif($var.Name -eq "ScriptSpecific"){
-      foreach($item in $var.Value.PSObject.Properties){
-        if($item.Name -eq $Script){
-          foreach($obj in $item.Value.PSObject.Properties){
-            Set-Variable -Name $obj.Name -Value $obj.Value -Scope Global
-          }
-          break
-        }
-      }
+    else {
+      Set-Variable -Name $key -Value $vars.$key -Scope Global 
     }
-    else{
-      Set-Variable -Name $var.Name -Value $var.Value -Scope Global
-    }
+    
   }
 }
-#EndRegion '.\Public\Get-ScriptVariables.ps1' 43
-#Region '.\Public\Get-Shortcut.ps1' 0
+#EndRegion '.\Public\Get-ScriptVariables.ps1' 82
+#Region '.\Public\Get-Shortcut.ps1' -1
+
 function Get-Shortcut{
   [CmdletBinding()]
   param(
@@ -841,7 +946,8 @@ function Get-Shortcut{
   }
 }
 #EndRegion '.\Public\Get-Shortcut.ps1' 54
-#Region '.\Public\Get-Values.ps1' 0
+#Region '.\Public\Get-Values.ps1' -1
+
 <#
   .DESCRIPTION
   This cmdlet is designed to help PSU scripts for display of values
@@ -864,7 +970,8 @@ function Get-Values(){
   return $value.Replace("-"," ")
 }
 #EndRegion '.\Public\Get-Values.ps1' 22
-#Region '.\Public\Get-YesNo.ps1' 0
+#Region '.\Public\Get-YesNo.ps1' -1
+
 <#
   .DESCRIPTION
   This cmdlet is designed to help PSU scripts for display of yes/no
@@ -885,7 +992,8 @@ function Get-YesNo(){
   return "No"
 }  
 #EndRegion '.\Public\Get-YesNo.ps1' 20
-#Region '.\Public\New-EntraIDDeviceTrustBody.ps1' 0
+#Region '.\Public\New-EntraIDDeviceTrustBody.ps1' -1
+
 <#
     .SYNOPSIS
         Construct the body with the elements for a sucessful device trust validation required by a Function App that's leveraging the AADDeviceTrust.FunctionApp module.
@@ -929,7 +1037,8 @@ function New-EntraIDDeviceTrustBody {
   return $BodyTable
 }
 #EndRegion '.\Public\New-EntraIDDeviceTrustBody.ps1' 43
-#Region '.\Public\New-EventSource.ps1' 0
+#Region '.\Public\New-EventSource.ps1' -1
+
 function New-EventSource {
   [CmdLetBinding()]
   param(
@@ -970,7 +1079,79 @@ function New-EventSource {
   return $Source
 }
 #EndRegion '.\Public\New-EventSource.ps1' 40
-#Region '.\Public\New-RandomString.ps1' 0
+#Region '.\Public\New-PassphrasePassword.ps1' -1
+
+<#
+.SYNOPSIS
+  Generates a passphrase-style password using random words.
+
+.DESCRIPTION
+  The New-PassphrasePassword function creates a password by joining random words from a word list.
+  You can specify the number of words, a separator character, and optionally include a random number or capitalize each word.
+  The word list is sourced from the MSFT LAPS long word list https://www.microsoft.com/en-us/download/details.aspx?id=105762
+
+.PARAMETER Length
+  The number of words to include in the passphrase (default is 4, range 1-10).
+
+.PARAMETER Separator
+  The character to use between words in the passphrase (default is '-').
+
+.PARAMETER includeNumber
+  If specified, a random number will be appended to one of the words.
+
+.PARAMETER includeCapital
+  If specified, each word will be capitalized.
+
+.EXAMPLE
+  New-PassphrasePassword -Length 3 -Separator '_' -includeNumber -includeCapital
+
+  Generates a passphrase with 3 capitalized words, separated by underscores, and a random number added to one word.
+
+.EXAMPLE
+  New-PassphrasePassword
+
+  Generates a passphrase with 4 lowercase words separated by hyphens.
+
+.NOTES
+  Author: Jeremy Putman
+  Last Updated: 2025-10-12
+#>
+function New-PassphrasePassword{
+  [cmdletbinding()]
+  param(
+    [Parameter()][ValidateRange(1,10)][int]$Length = 4,
+    [Parameter()][ValidateSet('-','_','|','*','')][string]$Separator = '-',
+    [Parameter()][switch]$includeNumber,
+    [Parameter()][switch]$includeCapital
+  )
+  # Get the word list from the supporting files
+  $wordListPath = Join-Path -Path $PSScriptRoot -ChildPath "SupportFiles\wordlist.txt"
+  # Get Word list contents
+  $words = Get-Content -Path $wordListPath
+  # Initialize an array to hold selected words
+  $passphraseWords = [System.Collections.Generic.List[string]]::new()
+  # Randomly select words from the list if selected to include a number
+  if($includeNumber){
+    $random_word = Get-Random -Minimum 0 -Maximum $Length
+    $ranndom_number = Get-Random -Minimum 1 -Maximum 10
+  }
+  for ($i = 0; $i -lt $Length; $i++) {
+    $randomWord = $words | Get-Random
+    # Title case the words if selected
+    if($includeCapital){
+      $randomWord = [CultureInfo]::CurrentCulture.TextInfo.ToTitleCase($randomWord.ToLower())
+    }
+    if($includeNumber -and $i -eq $random_word){
+      $randomWord = "$($randomWord)$($ranndom_number)"
+    }
+    $passphraseWords.Add($randomWord)
+  }
+  # Return the joined passphrase
+  return $passphraseWords -join $Separator 
+}
+#EndRegion '.\Public\New-PassphrasePassword.ps1' 69
+#Region '.\Public\New-RandomString.ps1' -1
+
 <#
   .DESCRIPTION
   This cmdet will generate a random character string based on inputs passed to it.
@@ -995,7 +1176,8 @@ function New-RandomString{
   return [string]$characters[$randomString]
 }
 #EndRegion '.\Public\New-RandomString.ps1' 24
-#Region '.\Public\New-RSACertificateSignature.ps1' 0
+#Region '.\Public\New-RSACertificateSignature.ps1' -1
+
 <#
   .SYNOPSIS
       Creates a new signature based on content passed as parameter input using the private key of a certificate determined by it's thumbprint, to sign the computed hash of the content.
@@ -1061,7 +1243,8 @@ function New-RSACertificateSignature {
   }
 }
 #EndRegion '.\Public\New-RSACertificateSignature.ps1' 65
-#Region '.\Public\New-Shortcut.ps1' 0
+#Region '.\Public\New-Shortcut.ps1' -1
+
 <#
   .DESCRIPTION 
   This is designed to create a shortcut on the desktop. Originally from https://github.com/AdamGrossTX/ManagedUserManagement/blob/main/ClientScripts/Set-AutoLogon.ps1 by Adam Gross
@@ -1129,7 +1312,8 @@ function New-Shortcut {
   }  
 }
 #EndRegion '.\Public\New-Shortcut.ps1' 67
-#Region '.\Public\Remove-AutorunRegKeys.ps1' 0
+#Region '.\Public\Remove-AutorunRegKeys.ps1' -1
+
 <#
   .DESCRIPTION 
   This is designed to remove autorun keys for the machine. Originally from https://github.com/AdamGrossTX/ManagedUserManagement/blob/main/ClientScripts/Set-AutoLogon.ps1 by Adam Gross
@@ -1200,7 +1384,8 @@ function Remove-AutorunRegKeys {
   }
 }
 #EndRegion '.\Public\Remove-AutorunRegKeys.ps1' 70
-#Region '.\Public\Remove-Shortcut.ps1' 0
+#Region '.\Public\Remove-Shortcut.ps1' -1
+
 function Remove-Shortcut {
   [CmdletBinding()]
   param(
@@ -1253,7 +1438,8 @@ function Remove-Shortcut {
   }
 }
 #EndRegion '.\Public\Remove-Shortcut.ps1' 52
-#Region '.\Public\Remove-WindowsAutoLogon.ps1' 0
+#Region '.\Public\Remove-WindowsAutoLogon.ps1' -1
+
 <#
   .DESCRIPTION 
   This is designed to disable windows autologon functionality. Originally from https://github.com/AdamGrossTX/ManagedUserManagement/blob/main/ClientScripts/Set-AutoLogon.ps1 by Adam Gross and https://github.com/mkht/DSCR_AutoLogon
@@ -1283,7 +1469,8 @@ function Remove-WindowsAutoLogon {
   }
 }
 #EndRegion '.\Public\Remove-WindowsAutoLogon.ps1' 29
-#Region '.\Public\Send-TeamsWebhookMessage.ps1' 0
+#Region '.\Public\Send-TeamsWebhookMessage.ps1' -1
+
 function Send-TeamsWebhookMessage{
   [CmdletBinding()]
   param(
@@ -1341,7 +1528,8 @@ function Send-TeamsWebhookMessage{
   Invoke-RestMethod -uri $webhook -Method Post -body ($card | ConvertTo-Json -depth 5) -ContentType 'application/json' | Out-Null
 }
 #EndRegion '.\Public\Send-TeamsWebhookMessage.ps1' 57
-#Region '.\Public\Set-AutorunRegKeys.ps1' 0
+#Region '.\Public\Set-AutorunRegKeys.ps1' -1
+
 <#
   .DESCRIPTION 
   This is designed to add autorun keys for the machine. Originally from https://github.com/AdamGrossTX/ManagedUserManagement/blob/main/ClientScripts/Set-AutoLogon.ps1 by Adam Gross
@@ -1398,7 +1586,8 @@ function Set-AutorunRegKeys {
   }
 }
 #EndRegion '.\Public\Set-AutorunRegKeys.ps1' 56
-#Region '.\Public\Set-LoadingAnimation.ps1' 0
+#Region '.\Public\Set-LoadingAnimation.ps1' -1
+
 function Set-LoadingAnimation {
   [CmdletBinding()]
   param(
@@ -1411,7 +1600,8 @@ function Set-LoadingAnimation {
   }
 }
 #EndRegion '.\Public\Set-LoadingAnimation.ps1' 12
-#Region '.\Public\Set-WindowsAutoLogon.ps1' 0
+#Region '.\Public\Set-WindowsAutoLogon.ps1' -1
+
 <#
   .DESCRIPTION 
   This is designed to enable windows autologon functionality. Originally from https://github.com/AdamGrossTX/ManagedUserManagement/blob/main/ClientScripts/Set-AutoLogon.ps1 by Adam Gross and https://github.com/mkht/DSCR_AutoLogon
@@ -1443,7 +1633,8 @@ function Set-WindowsAutoLogon {
   }
 }
 #EndRegion '.\Public\Set-WindowsAutoLogon.ps1' 31
-#Region '.\Public\Show-ManageMailboxModal.ps1' 0
+#Region '.\Public\Show-ManageMailboxModal.ps1' -1
+
 function Show-ManageMailboxModal {
   [CmdletBinding()]
   param(
@@ -1546,7 +1737,8 @@ function Show-ManageMailboxModal {
   }
 }
 #EndRegion '.\Public\Show-ManageMailboxModal.ps1' 102
-#Region '.\Public\Test-AllowedGroupMember.ps1' 0
+#Region '.\Public\Test-AllowedGroupMember.ps1' -1
+
 # TEST (maybe split)
 <#
   .DESCRIPTION
@@ -1643,7 +1835,8 @@ function Test-AllowedGroupMember{
   return $false
 }
 #EndRegion '.\Public\Test-AllowedGroupMember.ps1' 96
-#Region '.\Public\Test-EntraIDDeviceRegistration.ps1' 0
+#Region '.\Public\Test-EntraIDDeviceRegistration.ps1' -1
+
 <#
   .SYNOPSIS
       Determine if the device conforms to the requirement of being either Azure AD joined or Hybrid Azure AD joined.
@@ -1672,7 +1865,8 @@ function Test-EntraIDDeviceRegistration {
   }
 }
 #EndRegion '.\Public\Test-EntraIDDeviceRegistration.ps1' 28
-#Region '.\Public\Test-LocalAdmin.ps1' 0
+#Region '.\Public\Test-LocalAdmin.ps1' -1
+
 function Test-LocalAdmin{
   [CmdletBinding()]
   param ()
@@ -1684,7 +1878,8 @@ function Test-LocalAdmin{
   }  
 }
 #EndRegion '.\Public\Test-LocalAdmin.ps1' 11
-#Region '.\Public\Test-SamAccountName.ps1' 0
+#Region '.\Public\Test-SamAccountName.ps1' -1
+
 <#
   .DESCRIPTION
   This cmdlet is designed to check Active Directory for a valid samAccountName when creating/changing user.
@@ -1732,7 +1927,8 @@ function Test-SamAccountName{
   return $false  
 }
 #EndRegion '.\Public\Test-SamAccountName.ps1' 47
-#Region '.\Public\Write-AutomationEventLog.ps1' 0
+#Region '.\Public\Write-AutomationEventLog.ps1' -1
+
 function Write-AutomationEventLog{
   [CmdletBinding()]
   param(
@@ -1766,7 +1962,8 @@ function Write-AutomationEventLog{
   Write-WinEvent @EventEntry
 }
 #EndRegion '.\Public\Write-AutomationEventLog.ps1' 33
-#Region '.\Public\Write-WinEvent.ps1' 0
+#Region '.\Public\Write-WinEvent.ps1' -1
+
 function Write-WinEvent {
   [CmdLetBinding()]
   param(

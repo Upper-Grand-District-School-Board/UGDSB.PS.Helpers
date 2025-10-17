@@ -31,6 +31,11 @@ $params = @{
   UnversionedOutputDirectory = $true
 }
 Build-Module @params 
+$foldersToCopy = @("SupportFiles")
+foreach($folder in $foldersToCopy){
+  $folderPath = Join-Path -Path $parentFolder -ChildPath $folder
+  Copy-Item -Path $folderPath -Destination "$($moduleDir)\UGDSB.PS.Helpers" -Recurse -Force
+}
 #$path = (Get-Module -ListAvailable "UGDSB.PS.Helpers" | Where-Object {$_.Path -like "*$($global:Version)*"}).path
 #if($path){
 #  $directory = (Get-Item $Path).DirectoryName
