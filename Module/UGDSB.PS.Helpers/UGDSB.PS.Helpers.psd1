@@ -10,7 +10,7 @@
     RootModule = 'UGDSB.PS.Helpers.psm1'
     
     # Version number of this module.
-    ModuleVersion = '0.2.1'
+    ModuleVersion = '0.3.0'
     
     # Supported PSEditions
     # CompatiblePSEditions = @()
@@ -68,7 +68,7 @@
     
     # Functions to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no functions to export.
     #FunctionsToExport = @()
-    FunctionsToExport = @('Add-PInvokeType','Convert-EntraObjIDtoSid','Convert-SidtoEntraObjID','Get-AllowedAccess','Get-AutorunRegKeys','Get-CleanReturnData','Get-DSREGCMDStatus','Get-EntraDeviceCertificate','Get-EntraIDDeviceID','Get-EntraIDJoinDate','Get-EntraIDRegistrationCertificateThumbprint','Get-EntraIDTenantID','Get-InstalledApplications','Get-IntuneDeviceCertificate','Get-KeyVaultSecret','Get-PermissionList','Get-PublicKeyBytesEncodedString','Get-ScriptVariables','Get-Shortcut','Get-Values','Get-YesNo','New-EntraIDDeviceTrustBody','New-EventSource','New-PassphrasePassword','New-RandomString','New-RSACertificateSignature','New-Shortcut','Remove-AutorunRegKeys','Remove-Shortcut','Remove-WindowsAutoLogon','Send-TeamsWebhookMessage','Set-AutorunRegKeys','Set-LoadingAnimation','Set-WindowsAutoLogon','Show-ManageMailboxModal','Test-AllowedGroupMember','Test-EntraIDDeviceRegistration','Test-LocalAdmin','Test-SamAccountName','Write-AutomationEventLog','Write-WinEvent')
+    FunctionsToExport = @('Add-PInvokeType','Convert-EntraObjIDtoSid','Convert-SidtoEntraObjID','Get-AllowedAccess','Get-AutorunRegKeys','Get-CleanReturnData','Get-DSREGCMDStatus','Get-EntraDeviceCertificate','Get-EntraIDDeviceID','Get-EntraIDJoinDate','Get-EntraIDRegistrationCertificateThumbprint','Get-EntraIDTenantID','Get-InstalledApplications','Get-IntuneDeviceCertificate','Get-KeyVaultSecret','Get-PermissionList','Get-PublicKeyBytesEncodedString','Get-ScriptVariables','Get-Shortcut','Get-Values','Get-YesNo','New-EntraIDDeviceTrustBody','New-EventSource','New-PassphrasePassword','New-RandomString','New-RSACertificateSignature','New-Shortcut','Remove-AutorunRegKeys','Remove-Shortcut','Remove-WindowsAutoLogon','Send-TeamsWebhookMessage','Set-AutorunRegKeys','Set-LoadingAnimation','Set-WindowsAutoLogon','Show-ManageMailboxModal','Test-AllowedGroupMember','Test-EntraIDDeviceRegistration','Test-LocalAdmin','Test-SamAccountName','Write-AutomationEventLog','Write-DashboardEventLog','Write-WinEvent')
     
     # Cmdlets to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no cmdlets to export.
     CmdletsToExport = @()

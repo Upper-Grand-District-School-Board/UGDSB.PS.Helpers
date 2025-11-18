@@ -341,7 +341,8 @@ function Get-CleanReturnData {
   [cmdletbinding()]
   param(
     [Parameter(Mandatory = $true)][Object[]]$Data,
-    [Parameter()][string[]]$PropertiesToSkip
+    [Parameter()][string[]]$PropertiesToSkip,
+    [Parameter()][string[]]$RequiredProperties
   )
   # Get a list of the property names
   $item_properties = switch -Regex ($Data.GetType().Name) {
@@ -353,21 +354,26 @@ function Get-CleanReturnData {
   $return_data = [System.Collections.Generic.List[PSCustomObject]]::new()
   foreach ($item in $Data) {
     $obj = [PSCustomObject]@{}
-    foreach($property in $item_properties){
-      if($property -notin $PropertiesToSkip){
-        if($item.$property.gettype().basetype.Name -eq "Enum"){
+    foreach ($property in $item_properties) {
+      if ($item.$property -and $property -notin $PropertiesToSkip) {
+        if ($item.$property.gettype().basetype.Name -eq "Enum") {
           $obj | Add-Member -NotePropertyName $property -NotePropertyValue $item.$property.tostring() -force
         }
-        else{
+        else {
           $obj | Add-Member -NotePropertyName $property -NotePropertyValue $item.$property -force
         }
+      }
+    }
+    foreach($property in $RequiredProperties){
+      if(-not $obj.PSObject.Properties[$property]){
+        $obj | Add-Member -NotePropertyName $property -NotePropertyValue $null -force
       }
     }
     $return_data.Add($obj) | Out-Null
   }
   return $return_data
 }
-#EndRegion '.\Public\Get-CleanReturnData.ps1' 59
+#EndRegion '.\Public\Get-CleanReturnData.ps1' 65
 #Region '.\Public\Get-DSREGCMDStatus.ps1' -1
 
 <#
@@ -1947,7 +1953,7 @@ function Write-AutomationEventLog{
     $threadID = Get-Random
   }
   $EventEntry = @{
-    Source    = $Source
+    Source    = ($Source -replace "-","_")
     LogName   = $LogName
     EventType = $EventType
     EventId   = $EventId  
@@ -1962,6 +1968,77 @@ function Write-AutomationEventLog{
   Write-WinEvent @EventEntry
 }
 #EndRegion '.\Public\Write-AutomationEventLog.ps1' 33
+#Region '.\Public\Write-DashboardEventLog.ps1' -1
+
+function Write-DashboardEventLog {
+  [CmdletBinding()]
+  param(
+    [Parameter(Mandatory = $true)][string]$Source,
+    [Parameter()][string]$LogName = "PowerShellScripts",
+    [Parameter()][string]$EventType = "Information",
+    [Parameter()][int]$EventId = 1000,
+    [Parameter()][int]$threadID,
+    [Parameter(Mandatory = $true)][string]$user,
+    [Parameter(Mandatory = $true)][string]$action,
+    [Parameter()][string]$result = "Success",
+    [Parameter()][string]$errormsg = $null,
+    [Parameter()][bool]$showToasts = $true,
+    [Parameter()][bool]$eventLog = $true
+  )
+  $error_toast_params = @{
+    Duration        = 5000
+    MessageColor    = "white"
+    BackgroundColor = "red"
+    Position        = "center"
+    CloseOnClick    = $true
+  }
+  $success_toast_params = @{
+    Duration        = 2000
+    MessageColor    = "white"
+    BackgroundColor = "green"
+    Position        = "center"
+    CloseOnClick    = $true
+  }
+  $warning_toast_params = @{
+    Duration        = 2000
+    MessageColor    = "white"
+    BackgroundColor = "darkorange"
+    Position        = "center"
+    CloseOnClick    = $true
+  }  
+  # Thread ID
+  if (-not $PSBoundParameters.ContainsKey("threadID")) {
+    $threadID = Get-Random
+  }
+  $EventEntry = @{
+    Source    = ($Source -replace "-", "_")
+    LogName   = $LogName
+    EventType = $EventType
+    EventId   = $EventId  
+    EventData = [Ordered]@{
+      thread = $threadID
+      user   = $user     
+      action = $action
+      result = $result
+      error  = $errormsg
+    }
+  }
+  if( $eventLog) {
+    Write-WinEvent @EventEntry
+  }
+  if ($showToasts) {
+    if ($result -eq "Success") {
+      Show-UDToast @success_toast_params -Message $action
+    }
+    elseif ($result -eq "Warning"){
+      Show-UDToast @warning_toast_params -Message $action
+    }
+    else {
+      Show-UDToast @error_toast_params -Message $action
+    }
+  }
+}
+#EndRegion '.\Public\Write-DashboardEventLog.ps1' 69
 #Region '.\Public\Write-WinEvent.ps1' -1
 
 function Write-WinEvent {

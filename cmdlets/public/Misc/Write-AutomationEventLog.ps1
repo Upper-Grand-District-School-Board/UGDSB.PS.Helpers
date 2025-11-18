@@ -16,7 +16,7 @@ function Write-AutomationEventLog{
     $threadID = Get-Random
   }
   $EventEntry = @{
-    Source    = $Source
+    Source    = ($Source -replace "-","_")
     LogName   = $LogName
     EventType = $EventType
     EventId   = $EventId  

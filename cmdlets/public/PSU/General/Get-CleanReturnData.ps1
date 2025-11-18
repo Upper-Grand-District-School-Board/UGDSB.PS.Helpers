@@ -30,7 +30,8 @@ function Get-CleanReturnData {
   [cmdletbinding()]
   param(
     [Parameter(Mandatory = $true)][Object[]]$Data,
-    [Parameter()][string[]]$PropertiesToSkip
+    [Parameter()][string[]]$PropertiesToSkip,
+    [Parameter()][string[]]$RequiredProperties
   )
   # Get a list of the property names
   $item_properties = switch -Regex ($Data.GetType().Name) {
@@ -42,14 +43,19 @@ function Get-CleanReturnData {
   $return_data = [System.Collections.Generic.List[PSCustomObject]]::new()
   foreach ($item in $Data) {
     $obj = [PSCustomObject]@{}
-    foreach($property in $item_properties){
-      if($property -notin $PropertiesToSkip){
-        if($item.$property.gettype().basetype.Name -eq "Enum"){
+    foreach ($property in $item_properties) {
+      if ($item.$property -and $property -notin $PropertiesToSkip) {
+        if ($item.$property.gettype().basetype.Name -eq "Enum") {
           $obj | Add-Member -NotePropertyName $property -NotePropertyValue $item.$property.tostring() -force
         }
-        else{
+        else {
           $obj | Add-Member -NotePropertyName $property -NotePropertyValue $item.$property -force
         }
+      }
+    }
+    foreach($property in $RequiredProperties){
+      if(-not $obj.PSObject.Properties[$property]){
+        $obj | Add-Member -NotePropertyName $property -NotePropertyValue $null -force
       }
     }
     $return_data.Add($obj) | Out-Null
